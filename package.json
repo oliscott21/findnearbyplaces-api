@@ -1,0 +1,23 @@
+{
+  "name": "findnearbyplaces-api",
+  "version": "1.0.0",
+  "description": "This repo will contain the necessary code to complete the project for ISTA 330. It will be done\r   in two parts. Part one will contain the necessary code to support the backend-serivces. This\r   will include inserting and getting app info from a database. Part two will contain the\r   necessary code for the frontend-services. Together they will make a yelp-like app, which will\r   be deployed on Heroku. The database will be a Postgres SQL database.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oliscott21/findnearbyplaces-api.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/oliscott21/findnearbyplaces-api/issues"
+  },
+  "homepage": "https://github.com/oliscott21/findnearbyplaces-api#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.3"
+  }
+}
