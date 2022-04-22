@@ -1,25 +1,62 @@
 //dependacies
 const express = require("express");
 let { db } = require("./data_access/db");
-
 const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 4002;
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
+const fs = require("fs");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
 
 //middlewares
 app.use(express.json());
 app.use(cors());
 
-const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
-const fs = require('fs');
+passport.use(new LocalStrategy({ usernameField: "email"}, function verify(username, password, cb) {
+    db.login(username, password)
+    .then(x => {
+      console.log(x);
+
+        if (x.valid) {
+            return cb(null, x.user);
+        } else {
+            return cb(null, false, {message: x.message})
+        }
+    })
+    .catch(e => {
+        console.log(e);
+        return cb("Something went wrong");
+    });
+}));
+
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: false,
+    store: new SQLiteStore({ db: 'sessions.db', dir: './sessions' })
+}));
+app.use(passport.authenticate('session'));
+
+passport.serializeUser(function(user, cb) {
+    process.nextTick(function() {
+        cb(null, { id: user.id, username: user.username });
+    });
+});
+
+passport.deserializeUser(function(user, cb) {
+    process.nextTick(function() {
+        return cb(null, user);
+    });
+});
 
 //methods
 app.get("/", (request, response) => {
     response.status(200).json({done: true, message: "Fine!"});
 });
-
-
 
 // needs more work
 app.get("/search/:search_term/:user_location/:radius_filter?/:maximum_results_to_return/:category_filter?/:sort?", (request, response) => {
@@ -45,7 +82,7 @@ app.get("/search/:search_term/:user_location/:radius_filter?/:maximum_results_to
 */
 });
 
-// done, need to update for authentication
+// done
 app.post("/register", (request, response) => {
     let email = request.body.email;
     let password = request.body.password;
@@ -64,46 +101,42 @@ app.post("/register", (request, response) => {
     });
 });
 
-// done, need to update for authentication
-app.post("/login", (request, response) => {
-    let email = request.body.email;
-    let password = request.body.password;
+// done
+app.post("/login", passport.authenticate("local", {
+    successRedirect: '/login/success',
+    failureRedirect: '/login/failed'
+}));
 
-    db.login(email, password)
-    .then(x => {
-        if (x.rows.length != 1) {
-            response.status(401).json({done: false, result: "No account with given email and password combination"});
-        } else {
-            let pass = x.rows[0].password;
-            if (pass === password) {
-              response.status(200).json({done: true, result: "Successfully logged in!"});
-            } else {
-                response.status(401).json({done: false, result: "Incorrect password!"});
-            }
-        }
-    })
-    .catch(e => {
-        console.log(e);
-        response.status(500).json({done: false, message: "Something went wrong."});
-    });
+//done
+app.get("/login/success", (request, response) => {
+    response.status(200).json({done: true, result: "Successfully logged in!"});
+});
+
+//done
+app.get("/login/failed", (request, response) => {
+    response.status(401).json({done: false, result: "Credentials invalid!"});
 });
 
 // needs more work
 app.post("/place", (request, response) => {
-    let name = request.body.name;
-    let category_id = request.body.category_id;
-    let latitude = request.body.latitude;
-    let longitude = request.body.longitude;
-    let description = request.body.description;
+    if (!request.isAuthenticated()) {
+        response.status(401).json({done: false, message: "Please log in first!"});
+    } else {
+        let name = request.body.name;
+        let category_id = request.body.category_id;
+        let latitude = request.body.latitude;
+        let longitude = request.body.longitude;
+        let description = request.body.description;
 
-    db.addPlace(name, category_id, latitude, longitude, description)
-    .then(x => {
-        console.log(x);
-    })
-    .catch(e => {
-        console.log(e);
-        response.status(500).json({done: false, message: "Something went wrong."});
-    });
+        db.addPlace(name, category_id, latitude, longitude, description)
+        .then(x => {
+            console.log(x);
+        })
+        .catch(e => {
+            console.log(e);
+            response.status(500).json({done: false, message: "Something went wrong."});
+        });
+    }
 });
 
 // done, need to update for authentication
@@ -168,10 +201,10 @@ app.post("/photo", upload.array("photo") , (request, response) => {
 });
 
 app.post("/review", (request, response) => {
-    
+
 });
 
 
 app.listen(port, () => {
-    console.log("Listening to port 4002");
+    console.log("Listening to port " + port);
 });

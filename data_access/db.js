@@ -72,7 +72,19 @@ let db = {
     },
 
     login: (email, password) => {
-        return pool.query(`select * from findnearbyplaces.customers q where q.email = $1`, [email]);
+        return pool.query(`select * from findnearbyplaces.customers q where q.email = $1`, [email])
+        .then(x => {
+            if (x.rows.length == 1) {
+                let valid = password === x.rows[0].password;
+                if (valid) {
+                    return { valid: true, user: {id: x.rows[0].id, username: x.rows[0].email}};
+                } else {
+                    return { valid: false, message: "Credentials are not valid!"};
+                }
+            } else {
+                return {valid: false, message: "Email not found!"}
+            }
+        });
     },
 
     addPlace: (name, category_id, latitude, longitude, description) => {
