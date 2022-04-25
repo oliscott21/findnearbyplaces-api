@@ -87,20 +87,30 @@ let db = {
         });
     },
 
-    addPlace: (name, category_id, latitude, longitude, description) => {
-        console.log(name);
-        console.log(category_id);
-        console.log(latitude);
-        console.log(longitude);
-        console.log(description);
+    addPlace: (name, user_id, category_id, latitude, longitude, description) => {
+        return pool.query(`insert into findnearbyplaces.place (name, latitude, longitude, description, category_id, customer_id)
+        values ($1, $2, $3, $4, $5, $6) returning id`, [name, latitude, longitude, description, category_id, user_id]);
+    },
 
-        return pool.query(`insert into findnearbyplaces.places`)
+    checkPlace: (user_id, place_id) => {
+        return pool.query(`select * from findnearbyplaces.place q
+          where q.id = $1 and q.customer_id = $2`, [place_id, user_id]);
+    },
+
+    updatePlace: (place_id, user_id, name, category_id, latitude, longitude, description) => {
+        return pool.query(`update findnearbyplaces.place set
+          name = coalesce($3, name),
+          category_id = coalesce($4, category_id),
+          latitude = coalesce($5, latitude),
+          longitude = coalesce($6, longitude),
+          description = coalesce($7, description)
+          where id = $1 and customer_id = $2;`, [place_id, user_id, name, category_id, latitude, longitude, description]);
     },
 
     addCategory: (name) => {
         return pool.query(`insert into findnearbyplaces.category (name) values ($1)
         on conflict (name) do nothing
-        returning id;`, [name])
+        returning id;`, [name]);
     },
 
     addPhoto: (photo) => {
@@ -117,6 +127,46 @@ let db = {
       return pool.query(`insert into findnearbyplaces.review_photo (review_id, photo_id)
       values ($1, $2)`, [review_id, photo_id]);
     },
+
+    addReview: (place_id, user_id, comment, rating) => {
+        return pool.query(`insert into findnearbyplaces.reviews (location_id, customer_id, text, rating)
+        values ($1, $2, $3, $4) returning id;`, [place_id, user_id, comment, rating]);
+    },
+
+    checkReview: (review_id, user_id) => {
+        return pool.query(`select * from findnearbyplaces.reviews q
+          where q.id = $1 and q.customer_id = $2`, [review_id, user_id]);
+    },
+
+    updateReview: (review_id, user_id, comment, rating) => {
+        return pool.query(`update findnearbyplaces.reviews set
+          text = coalesce($3, text),
+          rating = coalesce($4, rating)
+          where id = $1 and customer_id = $2;`, [review_id, user_id, comment, rating]);
+    },
+
+    updatePhoto: (photo_id, photo) => {
+        return pool.query(`update findnearbyplaces.photos set
+          file = coalesce($2, file)
+          where id = $1 returning id`, [photo_id, photo]);
+    },
+
+    deletePlace: (place_id) => {
+        return pool.query(`delete from findnearbyplaces.place
+          where id = $1`, [place_id]);
+    },
+
+    deleteReview: (review_id) => {
+        return pool.query(`delete from findnearbyplaces.reviews
+          where id = $1`, [review_id]);
+    },
+
+    deletePhoto: (photo_id) => {
+        return pool.query(`delete from findnearbyplaces.photos
+          where id = $1`, [photo_id]);
+    }
+
+
 }
 
 module.exports = { db };
