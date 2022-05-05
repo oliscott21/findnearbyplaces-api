@@ -14,7 +14,18 @@ const SQLiteStore = require('connect-sqlite3')(session);
 
 //middlewares
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: "http://localhost:3000",
+    credentials: true
+}));
+
+app.use((request, response, next) => {
+    console.log(`request url: ${request.url}`);
+    console.log(`request method: ${request.method}`);
+    request.header("Access-Control-Allow-Origin", "*");
+    request.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+})
 
 passport.use(new LocalStrategy({ usernameField: "email"}, function verify(username, password, cb) {
     db.login(username, password)
@@ -31,14 +42,6 @@ passport.use(new LocalStrategy({ usernameField: "email"}, function verify(userna
     });
 }));
 
-app.use(session({
-    secret: 'keyboard cat',
-    resave: false,
-    saveUninitialized: false,
-    store: new SQLiteStore({ db: 'sessions.db', dir: './sessions' })
-}));
-app.use(passport.authenticate('session'));
-
 passport.serializeUser(function(user, cb) {
     process.nextTick(function() {
         cb(null, { id: user.id, username: user.username });
@@ -50,6 +53,17 @@ passport.deserializeUser(function(user, cb) {
         return cb(null, user);
     });
 });
+
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: false,
+    store: new SQLiteStore({ db: 'sessions.db', dir: './sessions' })
+}));
+
+app.use(passport.initialize());
+app.use(passport.authenticate('session'));
+app.use(passport.session());
 
 //methods
 app.get("/", (request, response) => {
@@ -113,6 +127,11 @@ app.get("/login/success", (request, response) => {
 //done
 app.get("/login/failed", (request, response) => {
     response.status(401).json({done: false, result: "Credentials invalid!"});
+});
+
+app.post('/logout', function(request, response) {
+    request.logout();
+    response.json({done:true, message: "The customer signed out successfully!"});
 });
 
 // done
