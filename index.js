@@ -65,33 +65,43 @@ app.use(passport.initialize());
 app.use(passport.authenticate('session'));
 app.use(passport.session());
 
-//methods
+// methods
 app.get("/", (request, response) => {
     response.status(200).json({done: true, message: "Fine!"});
 });
 
-// needs more work
-app.get("/search/:search_term/:user_location/:radius_filter?/:maximum_results_to_return/:category_filter?/:sort?", (request, response) => {
-    let search_term = request.params.search_term;
-    let user_location = request.params.user_location;
-    let radius_filter = request.params.radius_filter;
-    let maximum_results_to_return = request.params.maximum_results_to_return;
-    let category_filter = request.params.category_filter;
-    let sort = request.params.sort;
+// done
+app.get("/search", (request, response) => {
+    let search_term = request.query.search_term;
+    let user_location = request.query.user_location;
+    let radius_filter = request.query.radius_filter;
+    let maximum_results_to_return = request.query.maximum_results_to_return;
+    let category_filter = request.query.category_filter;
+    let sort = request.query.sort;
 
-    console.log(request.params);
-
-    db.findPlace(search_term, user_location, radius_filter, maximum_results_to_return, category_filter, sort);
-    response.status(200).json({done: true, result: "temp"})
-/*
+    db.findPlace(search_term, user_location, radius_filter, maximum_results_to_return, category_filter, sort)
     .then(x => {
-        response.status(200).json({done: true, result: "temp"})
+        if (sort) {
+            if (sort == 1) {
+                response.status(200).json({done: true, result: db.sortDist(x, user_location), message: "Got all places that match filters"});
+            } else {
+                db.getReviews()
+                .then(y => {
+                    let ids = []
+                    for (let i = 0; i < x.length; i++) {
+                        ids.push(x[i].id);
+                    }
+                    response.status(200).json({done: true, result: db.sortRate(x, y.rows, ids), message: "Got all places that match filters"})
+                })
+            }
+        } else {
+            response.status(200).json({done: true, result: db.sortDist(x, user_location), message: "Got all places that match filters"});
+        }
     })
     .catch(e => {
         console.log(e);
         response.status(500).json({done: false, message: "Something went wrong."});
     });
-*/
 });
 
 // done

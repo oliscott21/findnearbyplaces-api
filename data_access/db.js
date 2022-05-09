@@ -12,58 +12,128 @@ const conection = {
 
 const pool = new Pool(conection);
 
+function getDistance(latitude1, longitude1, latitude2, longitude2) {
+    let y = latitude2 - latitude1;
+    let x = longitude2 - longitude1;
+    return Math.sqrt(x * x + y * y);
+}
+
 let db = {
 
     findPlace: (search_term, user_location, radius_filter, maximum_results_to_return, category_filter, sort) => {
-
       let sqlQuery;
-      let bindItems = [search_term.toLowerCase() + '%', maximum_results_to_return];
+      let bindItems = ['%' + search_term.toLowerCase() + '%', search_term.toLowerCase(),
+          search_term.toLowerCase() + '%', '%' + search_term.toLowerCase(), maximum_results_to_return];
 
-      console.log("search_term: " + search_term);
-      console.log("user_location: " + user_location);
-      console.log("radius_filter: " + radius_filter);
-      console.log("maximum_results_to_return: " + maximum_results_to_return);
-      console.log("category_filter: " + category_filter);
-      console.log("sort: " + sort);
-
-      if (radius_filter, category_filter) {
-
-      } else if (radius_filter) {
-
-
-        bindItems.push(radius_filter);
-      } else if (category_filter) {
-        /*
-        sqlQuery = `select q.*, qq.name as category, q2.* from findnearbyplaces.place q
-        join findnearbyplaces.category qq on q.category_id = qq.id
-        join findnearbyplaces.reviews q2 on q.id = q2.location_id
-        where (lower(q.name) like $1 or lower(qq.name) like $1)
-        limit $2;`;
-        */
+      if (category_filter) {
+          sqlQuery = `select q.*, qq.name as category from findnearbyplaces.place q
+               join findnearbyplaces.category qq on q.category_id = qq.id
+               where (lower(q.name) like $1 or lower(qq.name) like $1
+               and lower(qq.name) = $6)
+               order by
+               case
+                  when lower(q.name) like $2 or lower(qq.name) like $2 then 1
+                  when lower(q.name) like $3 or lower(qq.name) like $3 then 2
+                  when lower(q.name) like $4 or lower(qq.name) like $4 then 4
+                  else 3
+               end,
+               abs(length($1) - length(q.name)) asc
+               limit $5`;
+          bindItems.push(category_filter);
       } else {
-        /*
-          sqlQuery = `select q.*, qq.name as category, q2.* from findnearbyplaces.place q
-          join findnearbyplaces.category qq on q.category_id = qq.id
-          join findnearbyplaces.reviews q2 on q.id = q2.location_id
-          where (lower(q.name) like $1 or lower(qq.name) like $1)
-          limit $2;`;
-          */
+          sqlQuery = `select q.*, qq.name as category from findnearbyplaces.place q
+               join findnearbyplaces.category qq on q.category_id = qq.id
+               where (lower(q.name) like $1 or lower(qq.name) like $1)
+               order by
+               case
+                  when lower(q.name) like $2 or lower(qq.name) like $2 then 1
+                  when lower(q.name) like $3 or lower(qq.name) like $3 then 2
+                  when lower(q.name) like $4 or lower(qq.name) like $4 then 4
+                  else 3
+               end,
+               abs(length($1) - length(q.name)) asc
+               limit $5`;
       }
-      console.log(bindItems);
-      /*
-      sqlQuery = 'select * from findnearbyplaces.place';
-      return pool.query(sqlQuery, "")
+
+      return pool.query(sqlQuery, bindItems)
       .then(x => {
-          let ret;
+          let result = x.rows;
+          let ret = [];
 
-          console.log(x);
+          if (radius_filter) {
+              let split = user_location.split(",");
+              let latitude = split[0];
+              let longitude = split[1];
 
+              for (let i = 0; i < result.length; i++) {
+                  let place_latitude = result[i].latitude;
+                  let place_longitude = result[i].longitude;
+
+                  let dist = getDistance(latitude, longitude, place_latitude, place_longitude);
+                  if (dist < radius_filter) {
+                      ret.unshift(result[i]);
+                  }
+              }
+          } else {
+              ret = result;
+          }
           return ret;
       });
-      */
+    },
 
-      //return pool.query()
-      return {valid: false, message: "done"};
+    sortDist: (arr, user_location) => {
+        let dist = [];
+        let temp = arr;
+
+        let sp = user_location.split(",");
+        let latitude = sp[0];
+        let longitude = sp[1];
+
+        for (let i = 0; i < arr.length; i++) {
+            let place_latitude = arr[i].latitude;
+            let place_longitude = arr[i].longitude;
+            dist.push(getDistance(latitude, longitude, place_latitude, place_longitude));
+        }
+
+        temp.sort((a, b) => {
+            return dist[temp.indexOf(a)] - dist[temp.indexOf(b)];
+        });
+
+        return temp;
+    },
+
+    getReviews: () => {
+        return pool.query(`select * from findnearbyplaces.reviews q2`)
+    },
+
+    sortRate: (arr, reviews, ids) => {
+        let temp = arr;
+        let loc_ids = [];
+        let ratings = [];
+
+        for (let i = 0; i < reviews.length; i++) {
+            if (ids.includes(reviews[i].location_id) && !loc_ids.includes(reviews[i].location_id)) {
+                loc_ids.push(reviews[i].location_id);
+            }
+        }
+
+        for (let i = 0; i < loc_ids.length; i++) {
+            let num = 0;
+            let total = 0;
+            for (let j = 0; j < reviews.length; j++) {
+                if (loc_ids[i] == reviews[j].location_id) {
+                    num += reviews[j].rating;
+                    total += 1;
+                }
+            }
+            ratings.push(num/total);
+        }
+
+        temp.sort((a, b) => {
+            return ratings[temp.indexOf(b)] - ratings[temp.indexOf(a)];
+        });
+
+        return temp;
     },
 
     addCustomer: (email, password) => {
