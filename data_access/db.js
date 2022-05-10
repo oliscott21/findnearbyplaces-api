@@ -183,6 +183,10 @@ let db = {
         returning id;`, [name]);
     },
 
+    getCategory: (name) => {
+        return pool.query(`select c.name from findnearbyplaces.category c`);
+    },
+
     addPhoto: (photo) => {
         return pool.query(`insert into findnearbyplaces.photos (file) values ($1)
         returning id;`, [photo])

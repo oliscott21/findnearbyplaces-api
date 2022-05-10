@@ -189,6 +189,18 @@ app.post("/category", (request, response) => {
     }
 });
 
+app.get("/category", (request, response) => {
+    db.getCategory()
+    .then(x => {
+        response.status(201).json({done: true, result: x.rows, message: "Got categories"})
+    })
+    .catch(e => {
+        console.log(e);
+        response.status(500).json({done: false, id: undefined, message: "Something went wrong."});
+    });
+});
+
+
 // done
 app.post("/photo", upload.array("photo") , (request, response) => {
     if (!request.isAuthenticated()) {
