@@ -184,7 +184,7 @@ let db = {
     },
 
     getCategory: (name) => {
-        return pool.query(`select c.name from findnearbyplaces.category c`);
+        return pool.query(`select * from findnearbyplaces.category c`);
     },
 
     addPhoto: (photo) => {

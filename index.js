@@ -131,7 +131,7 @@ app.post("/login", passport.authenticate("local", {
 
 //done
 app.get("/login/success", (request, response) => {
-    response.status(200).json({done: true, result: "Successfully logged in!"});
+    response.status(200).json({done: true, id: request.user.id, result: "Successfully logged in!"});
 });
 
 //done
