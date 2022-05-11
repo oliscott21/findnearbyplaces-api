@@ -15,7 +15,7 @@ const SQLiteStore = require('connect-sqlite3')(session);
 //middlewares
 app.use(express.json());
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: "https://oliscott21.github.io/",
     credentials: true
 }));
 
