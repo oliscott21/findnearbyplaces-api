@@ -266,6 +266,23 @@ app.post("/review", (request, response) => {
     }
 });
 
+app.get("/review", (request, response) => {
+    if (!request.isAuthenticated()) {
+        response.status(401).json({done: false, message: "Please log in first!"});
+    } else {
+        let place_id = request.query.place_id;
+
+        db.getReview(place_id)
+        .then(x => {
+            response.status(201).json({done: true, id: x.rows, result: "Review grab successfully!"});
+        })
+        .catch(e => {
+            console.log(e);
+            response.status(500).json({done: false, id: undefined, message: "Something went wrong."});
+        });
+    }
+});
+
 // done
 app.put("/place", (request, response) => {
     if (!request.isAuthenticated()) {

@@ -207,6 +207,11 @@ let db = {
         values ($1, $2, $3, $4) returning id;`, [place_id, user_id, comment, rating]);
     },
 
+    getReview: (place_id) => {
+        return pool.query(`select * from findnearbyplaces.reviews q
+          where q.location_id = $1`, [place_id]);
+    },
+
     checkReview: (review_id, user_id) => {
         return pool.query(`select * from findnearbyplaces.reviews q
           where q.id = $1 and q.customer_id = $2`, [review_id, user_id]);
